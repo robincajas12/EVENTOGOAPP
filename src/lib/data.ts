@@ -87,6 +87,7 @@ export const getEventById = async (id: string): Promise<Event | undefined> => {
   if (!conn) {
     return DEMO_EVENTS.find(event => event.id === id);
   }
+  if (!mongoose.Types.ObjectId.isValid(id)) return undefined;
   const event = await EventModel.findById(id).lean();
   if (event) {
     return JSON.parse(JSON.stringify({ ...event, id: event._id.toString() }));
@@ -113,6 +114,7 @@ export const updateEvent = async (id: string, eventData: Partial<Omit<Event, 'id
         DEMO_EVENTS[eventIndex] = { ...DEMO_EVENTS[eventIndex], ...eventData };
         return DEMO_EVENTS[eventIndex];
     }
+    if (!mongoose.Types.ObjectId.isValid(id)) return null;
     const updatedEvent = await EventModel.findByIdAndUpdate(id, eventData, { new: true }).lean();
     if(updatedEvent) {
         return JSON.parse(JSON.stringify({ ...updatedEvent, id: updatedEvent._id.toString() }));
@@ -128,6 +130,7 @@ export const deleteEvent = async (id: string): Promise<boolean> => {
         DEMO_EVENTS.splice(eventIndex, 1);
         return true;
     }
+    if (!mongoose.Types.ObjectId.isValid(id)) return false;
     const result = await EventModel.findByIdAndDelete(id);
     return !!result;
 }
@@ -152,6 +155,7 @@ export const findUserById = async (id: string): Promise<User | undefined> => {
     if (!conn) {
         return DEMO_USERS.find(user => user.id === id);
     }
+  if (!mongoose.Types.ObjectId.isValid(id)) return undefined;
   const user = await UserModel.findById(id).lean();
    if (user) {
     const { _id, ...rest } = user as any;
@@ -185,10 +189,10 @@ export const createOrder = async (
   ticketSelections: { ticketTypeId: string; quantity: number }[]
 ): Promise<Order> => {
   const conn = await dbConnect();
-  if (!conn) {
-    const event = DEMO_EVENTS.find(e => e.id === eventId);
-    if (!event) throw new Error('Event not found');
+  const event = await getEventById(eventId);
+  if (!event) throw new Error('Event not found');
 
+  if (!conn) {
     let totalAmount = 0;
     const createdTickets: Ticket[] = [];
 
@@ -229,11 +233,9 @@ export const createOrder = async (
     // Assign orderId to tickets
     createdTickets.forEach(t => t.orderId = newOrder.id);
     
-    return { ...newOrder, tickets: createdTickets };
+    return { ...newOrder, tickets: createdTickets.map(t => t.id) };
   }
 
-  const event = await getEventById(eventId);
-  if (!event) throw new Error('Event not found');
 
   const newTickets: any[] = [];
   let totalAmount = 0;
@@ -256,8 +258,8 @@ export const createOrder = async (
     }
   }
 
-  const createdTickets = await TicketModel.insertMany(newTickets);
-  const ticketIds = createdTickets.map(t => t._id);
+  const createdTicketDocs = await TicketModel.insertMany(newTickets);
+  const ticketIds = createdTicketDocs.map(t => t._id);
 
   const newOrder = await OrderModel.create({
     userId,
@@ -268,13 +270,18 @@ export const createOrder = async (
   });
   
   // Update QR data and orderId after tickets and order are created
-  for (const ticket of createdTickets) {
+  for (const ticket of createdTicketDocs) {
       const qrData = JSON.stringify({ ticketId: ticket._id.toString(), eventId, userId });
       await TicketModel.findByIdAndUpdate(ticket._id, { qrData, orderId: newOrder._id.toString() });
   }
 
   const finalOrder = await OrderModel.findById(newOrder._id).populate('tickets').lean();
-  return JSON.parse(JSON.stringify(finalOrder));
+  const result = {
+      ...finalOrder,
+      id: finalOrder!._id.toString(),
+      tickets: finalOrder!.tickets.map((t: any) => ({...t, id: t._id.toString()}))
+  }
+  return JSON.parse(JSON.stringify(result));
 };
 
 export const getTicketsByUserId = async (userId: string): Promise<Ticket[]> => {
@@ -291,6 +298,7 @@ export const getTicketById = async (ticketId: string): Promise<Ticket | undefine
     if (!conn) {
         return demoTickets.find(t => t.id === ticketId);
     }
+    if (!mongoose.Types.ObjectId.isValid(ticketId)) return undefined;
     const ticket = await TicketModel.findById(ticketId).lean();
     if (ticket) {
         return JSON.parse(JSON.stringify({...ticket, id: ticket._id.toString()}));
@@ -300,29 +308,36 @@ export const getTicketById = async (ticketId: string): Promise<Ticket | undefine
 
 export const validateAndUseTicket = async (ticketId: string): Promise<{ success: boolean; message: string; ticket?: Ticket, event?: Event }> => {
     const conn = await dbConnect();
-    if(!conn) {
-        const ticket = demoTickets.find(t => t.id === ticketId);
-        if (!ticket) {
-            return { success: false, message: "Invalid Ticket: Not found." };
+    
+    let ticket;
+    if (conn) {
+        if (!mongoose.Types.ObjectId.isValid(ticketId)) {
+             return { success: false, message: "Invalid Ticket ID format." };
         }
-        const event = DEMO_EVENTS.find(e => e.id === ticket.eventId);
-        if (ticket.status === 'used') {
-            return { success: false, message: "Ticket Already Used.", ticket, event };
-        }
-        ticket.status = 'used';
-        return { success: true, message: "Ticket Validated Successfully.", ticket, event };
+        ticket = await TicketModel.findById(ticketId).lean();
+    } else {
+        ticket = demoTickets.find(t => t.id === ticketId);
     }
 
-    const ticket = await TicketModel.findById(ticketId).lean();
     if(!ticket) {
         return { success: false, message: "Invalid Ticket: Not found." };
     }
 
     const event = await getEventById(ticket.eventId);
     if (ticket.status === 'used') {
-        return { success: false, message: "Ticket Already Used.", ticket: JSON.parse(JSON.stringify({...ticket, id: ticket._id.toString()})), event };
+        const ticketObject = conn ? JSON.parse(JSON.stringify({...ticket, id: ticket._id.toString()})) : ticket;
+        return { success: false, message: "Ticket Already Used.", ticket: ticketObject, event };
     }
 
-    const updatedTicket = await TicketModel.findByIdAndUpdate(ticketId, { status: 'used' }, { new: true }).lean();
-    return { success: true, message: "Ticket Validated Successfully.", ticket: JSON.parse(JSON.stringify({...updatedTicket, id: updatedTicket!._id.toString()})), event };
+    let updatedTicket;
+    if (conn) {
+      updatedTicket = await TicketModel.findByIdAndUpdate(ticketId, { status: 'used' }, { new: true }).lean();
+    } else {
+      const demoTicket = demoTickets.find(t => t.id === ticketId);
+      if (demoTicket) demoTicket.status = 'used';
+      updatedTicket = demoTicket;
+    }
+    
+    const finalTicket = conn && updatedTicket ? JSON.parse(JSON.stringify({...updatedTicket, id: updatedTicket!._id.toString()})) : updatedTicket;
+    return { success: true, message: "Ticket Validated Successfully.", ticket: finalTicket, event };
 }

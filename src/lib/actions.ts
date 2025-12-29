@@ -93,6 +93,7 @@ export async function purchaseTickets(eventId: string, ticketSelections: {ticket
   
   try {
     await createNewOrder(userId, eventId, ticketSelections);
+    revalidatePath('/tickets');
     return { success: true, message: 'Tickets purchased successfully!' };
   } catch(error) {
     return { success: false, message: (error as Error).message || 'An unknown error occurred.' };
@@ -112,6 +113,7 @@ export async function validateTicket(prevState: any, formData: FormData) {
         }
 
         const result = await validateTicketInDb(ticketId);
+        revalidatePath('/tickets');
 
         if (result.success) {
             return { status: 'success', message: result.message, eventName: result.event?.name };
@@ -135,18 +137,8 @@ const eventSchema = z.object({
     ticketTypes: z.string().min(1, 'At least one ticket type is required.')
 });
 
-export async function createEvent(data: FormData) {
-    const validated = eventSchema.safeParse({
-        name: data.get('name'),
-        description: data.get('description'),
-        date: data.get('date'),
-        locationName: data.get('locationName'),
-        locationLat: data.get('locationLat'),
-        locationLng: data.get('locationLng'),
-        capacity: data.get('capacity'),
-        image: data.get('image'),
-        ticketTypes: data.get('ticketTypes'),
-    });
+export async function createEvent(formData: FormData) {
+    const validated = eventSchema.safeParse(Object.fromEntries(formData.entries()));
 
     if (!validated.success) {
         return { success: false, message: 'Invalid data.', errors: validated.error.flatten().fieldErrors };
@@ -167,24 +159,14 @@ export async function createEvent(data: FormData) {
         };
         await createEventInDb(newEvent);
         revalidatePath('/admin/events');
-        redirect('/admin/events');
     } catch (e) {
         return { success: false, message: 'Failed to create event.' };
     }
+    redirect('/admin/events');
 }
 
-export async function updateEvent(id: string, data: FormData) {
-    const validated = eventSchema.safeParse({
-        name: data.get('name'),
-        description: data.get('description'),
-        date: data.get('date'),
-        locationName: data.get('locationName'),
-        locationLat: data.get('locationLat'),
-        locationLng: data.get('locationLng'),
-        capacity: data.get('capacity'),
-        image: data.get('image'),
-        ticketTypes: data.get('ticketTypes'),
-    });
+export async function updateEvent(id: string, formData: FormData) {
+    const validated = eventSchema.safeParse(Object.fromEntries(formData.entries()));
 
     if (!validated.success) {
         return { success: false, message: 'Invalid data.', errors: validated.error.flatten().fieldErrors };
@@ -204,10 +186,10 @@ export async function updateEvent(id: string, data: FormData) {
         await updateEventInDb(id, updatedEvent);
         revalidatePath('/admin/events');
         revalidatePath(`/events/${id}`);
-        redirect('/admin/events');
     } catch (e) {
         return { success: false, message: 'Failed to update event.' };
     }
+    redirect('/admin/events');
 }
 
 export async function deleteEvent(id: string) {
@@ -215,6 +197,7 @@ export async function deleteEvent(id: string) {
         await deleteEventFromDb(id);
         revalidatePath('/admin/events');
     } catch (e) {
-        return { success: false, message: 'Failed to delete event.' };
+        // This will be caught by a higher-level error boundary
+        throw new Error('Failed to delete event.');
     }
 }
