@@ -1,8 +1,7 @@
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
+import { useEffect, RefObject } from 'react';
 import { useFormStatus } from 'react-dom';
-import { validateTicket } from '@/lib/actions';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
@@ -25,23 +24,40 @@ function SubmitButton() {
   );
 }
 
-export default function TicketValidationForm() {
-  const [state, formAction] = useActionState(validateTicket, null);
-  const formRef = useRef<HTMLFormElement>(null);
+type TicketValidationFormProps = {
+    formRef: RefObject<HTMLFormElement>;
+    action: (payload: FormData) => void;
+    state: any;
+    onFormSubmission?: () => void;
+}
 
+export default function TicketValidationForm({ formRef, action, state, onFormSubmission }: TicketValidationFormProps) {
+  
   useEffect(() => {
-    if (state?.status) {
-      // Reset form after a successful or failed validation to allow new scan
-      formRef.current?.reset();
+    if (state?.status && formRef.current) {
+        // Reset form after a successful or failed validation to allow new scan
+        setTimeout(() => {
+            if (formRef.current) {
+                formRef.current.reset();
+            }
+        }, 100); // Small delay to ensure state update is processed
     }
-  }, [state])
+  }, [state, formRef])
+
+  const handleAction = (payload: FormData) => {
+    action(payload);
+    if(onFormSubmission) {
+      onFormSubmission();
+    }
+  };
+
 
   return (
     <div className="space-y-4">
-      <form ref={formRef} action={formAction} className="space-y-4">
+      <form ref={formRef} action={handleAction} className="space-y-4">
         <div className="grid w-full items-center gap-1.5">
           <Label htmlFor="qrData">Ticket Data</Label>
-          <Input name="qrData" id="qrData" placeholder='{"ticketId":"t-1",...}' autoFocus />
+          <Input name="qrData" id="qrData" placeholder='Scan or paste ticket data...' />
         </div>
         <SubmitButton />
       </form>
