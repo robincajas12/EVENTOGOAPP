@@ -1,3 +1,40 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "event-concert",
+      "description": "A lively concert with a cheering crowd and vibrant stage lights.",
+      "imageUrl": "https://images.unsplash.com/photo-1689783101582-98feb9393a57?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjb25jZXJ0JTIwY3Jvd2R8ZW58MHx8fHwxNzY2OTQ3MTA5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "concert crowd"
+    },
+    {
+      "id": "event-conference",
+      "description": "A professional conference with an engaging speaker on stage.",
+      "imageUrl": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjb25mZXJlbmNlJTIwc3BlYWtlcnxlbnwwfHx8fDE3NjcwMDk4MDN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "conference speaker"
+    },
+    {
+      "id": "event-exhibition",
+      "description": "An art exhibition with modern paintings in a well-lit gallery.",
+      "imageUrl": "https://images.unsplash.com/photo-1569084024058-1632922a4e1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxhcnQlMjBnYWxsZXJ5fGVufDB8fHx8MTc2Njk1Nzk5OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "art gallery"
+    },
+    {
+      "id": "event-food-festival",
+      "description": "A vibrant outdoor food festival with various food stalls.",
+      "imageUrl": "https://images.unsplash.com/photo-1675674683873-1232862e3c64?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxmb29kJTIwZmVzdGl2YWx8ZW58MHx8fHwxNzY3MDAxNTEwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "food festival"
+    },
+    {
+      "id": "event-tech-meetup",
+      "description": "People networking at a tech meetup in a modern office space.",
+      "imageUrl": "https://images.unsplash.com/photo-1746937618165-c8dc7f11dd77?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0ZWNoJTIwbWVldHVwfGVufDB8fHx8MTc2NzAxMTI2Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "tech meetup"
+    },
+    {
+      "id": "event-music-workshop",
+      "description": "A person teaching guitar at a music workshop.",
+      "imageUrl": "https://images.unsplash.com/photo-1695746999600-2e24d80b2932?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxtdXNpYyUyMHdvcmtzaG9wfGVufDB8fHx8MTc2NzAxMTI2NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "music workshop"
+    }
+  ]
 }
