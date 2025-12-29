@@ -35,6 +35,7 @@ import { Event } from '@/lib/types';
 
 function DeleteEventButton({ eventId }: { eventId: string }) {
   const { token } = useSession();
+  const { toast } = useToast();
   const deleteEventWithId = async () => {
      try {
       await deleteEvent(eventId, token);
@@ -58,13 +59,32 @@ function DeleteEventButton({ eventId }: { eventId: string }) {
 }
 
 function SeedDatabaseButton() {
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+
+  const handleSeed = () => {
+    startTransition(async () => {
+      const result = await seedDatabase();
+      if (result.success) {
+        toast({
+          title: "Database Seeded",
+          description: "The sample events and users have been created."
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Seeding Failed",
+          description: result.message
+        });
+      }
+    });
+  }
+
   return (
-    <form action={seedDatabase}>
-      <Button variant="outline" size="sm">
+      <Button onClick={handleSeed} variant="outline" size="sm" disabled={isPending}>
         <Database className="mr-2 h-4 w-4" />
-        Seed Database
+        {isPending ? 'Seeding...' : 'Seed Database'}
       </Button>
-    </form>
   );
 }
 
@@ -88,11 +108,15 @@ export default function AdminEventsPage() {
               const fetchedEvents = await getEventsAction(true, user.id); // include past events, filtered by user
               setEvents(fetchedEvents);
           } catch(e) {
-              // If db is not connected, it will throw. We can show an empty state.
+              toast({
+                variant: 'destructive',
+                title: 'Failed to load events',
+                description: 'Could not connect to the database. Please try seeding the database or check your connection string.'
+              })
           }
       });
     }
-  }, [user]);
+  }, [user, toast]);
 
   if (loading || !user) {
     return <div>Loading...</div>
