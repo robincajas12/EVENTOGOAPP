@@ -16,7 +16,10 @@ export function MainNav({ className, user, ...props }: MainNavProps) {
     { href: '/', label: 'Events', active: pathname === '/' },
     { href: '/discover', label: 'Discover', active: pathname === '/discover' },
     ...(user?.role === 'Admin'
-      ? [{ href: '/scan', label: 'Scan Tickets', active: pathname === '/scan' }]
+      ? [
+        { href: '/admin/events', label: 'Manage Events', active: pathname.startsWith('/admin/events') },
+        { href: '/scan', label: 'Scan Tickets', active: pathname === '/scan' }
+        ]
       : []),
   ];
 

@@ -71,13 +71,15 @@ let demoTickets: Ticket[] = [];
 
 
 // --- Event Functions ---
-export const getEvents = async (): Promise<Event[]> => {
+export const getEvents = async (includePast = false): Promise<Event[]> => {
   const conn = await dbConnect();
   if (!conn) {
-    return DEMO_EVENTS.filter(event => event.date >= new Date());
+    const events = includePast ? DEMO_EVENTS : DEMO_EVENTS.filter(event => event.date >= new Date());
+    return JSON.parse(JSON.stringify(events));
   }
-  const events = await EventModel.find({ date: { $gte: new Date() } }).lean();
-  return JSON.parse(JSON.stringify(events));
+  const query = includePast ? {} : { date: { $gte: new Date() } };
+  const events = await EventModel.find(query).sort({ date: 'asc' }).lean();
+  return JSON.parse(JSON.stringify(events.map(e => ({ ...e, id: e._id.toString() }))));
 };
 
 export const getEventById = async (id: string): Promise<Event | undefined> => {
@@ -86,8 +88,50 @@ export const getEventById = async (id: string): Promise<Event | undefined> => {
     return DEMO_EVENTS.find(event => event.id === id);
   }
   const event = await EventModel.findById(id).lean();
-  return JSON.parse(JSON.stringify(event));
+  if (event) {
+    return JSON.parse(JSON.stringify({ ...event, id: event._id.toString() }));
+  }
+  return undefined;
 };
+
+export const createEvent = async (eventData: Omit<Event, 'id'>): Promise<Event> => {
+    const conn = await dbConnect();
+    if (!conn) {
+        const newEvent = { ...eventData, id: `evt-${Date.now()}` };
+        DEMO_EVENTS.push(newEvent);
+        return newEvent;
+    }
+    const newEvent = await EventModel.create(eventData);
+    return JSON.parse(JSON.stringify({ ...newEvent.toObject(), id: newEvent._id.toString() }));
+};
+
+export const updateEvent = async (id: string, eventData: Partial<Omit<Event, 'id'>>): Promise<Event | null> => {
+    const conn = await dbConnect();
+    if (!conn) {
+        const eventIndex = DEMO_EVENTS.findIndex(e => e.id === id);
+        if (eventIndex === -1) return null;
+        DEMO_EVENTS[eventIndex] = { ...DEMO_EVENTS[eventIndex], ...eventData };
+        return DEMO_EVENTS[eventIndex];
+    }
+    const updatedEvent = await EventModel.findByIdAndUpdate(id, eventData, { new: true }).lean();
+    if(updatedEvent) {
+        return JSON.parse(JSON.stringify({ ...updatedEvent, id: updatedEvent._id.toString() }));
+    }
+    return null;
+}
+
+export const deleteEvent = async (id: string): Promise<boolean> => {
+    const conn = await dbConnect();
+    if (!conn) {
+        const eventIndex = DEMO_EVENTS.findIndex(e => e.id === id);
+        if (eventIndex === -1) return false;
+        DEMO_EVENTS.splice(eventIndex, 1);
+        return true;
+    }
+    const result = await EventModel.findByIdAndDelete(id);
+    return !!result;
+}
+
 
 // --- User Functions ---
 export const findUserByEmail = async (email: string): Promise<User | undefined> => {
@@ -116,7 +160,7 @@ export const findUserById = async (id: string): Promise<User | undefined> => {
   return undefined;
 };
 
-export const createUser = async (name: string, email: string, password: string): Promise<User> => {
+export const createNewUser = async (name: string, email: string, password: string): Promise<User> => {
     const conn = await dbConnect();
     if (!conn) {
         const newUser: User = {

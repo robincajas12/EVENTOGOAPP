@@ -3,7 +3,9 @@
 import { z } from 'zod';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { findUserByEmail, createUser as createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb } from './data';
+import { findUserByEmail, createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb, createEvent as createEventInDb, updateEvent as updateEventInDb, deleteEvent as deleteEventFromDb } from './data';
+import { revalidatePath } from 'next/cache';
+import type { Event } from './types';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address.'),
@@ -118,5 +120,101 @@ export async function validateTicket(prevState: any, formData: FormData) {
         }
     } catch (error) {
         return { status: 'error', message: 'Invalid QR code. Please scan a valid Event Go ticket.' };
+    }
+}
+
+const eventSchema = z.object({
+    name: z.string().min(3, 'Event name must be at least 3 characters.'),
+    description: z.string().min(10, 'Description must be at least 10 characters.'),
+    date: z.string().refine((val) => !isNaN(Date.parse(val)), 'Invalid date.'),
+    locationName: z.string().min(3, 'Location name is required.'),
+    locationLat: z.coerce.number().min(-90).max(90),
+    locationLng: z.coerce.number().min(-180).max(180),
+    capacity: z.coerce.number().int().min(1, 'Capacity must be at least 1.'),
+    image: z.string().min(1, 'Image placeholder is required.'),
+    ticketTypes: z.string().min(1, 'At least one ticket type is required.')
+});
+
+export async function createEvent(data: FormData) {
+    const validated = eventSchema.safeParse({
+        name: data.get('name'),
+        description: data.get('description'),
+        date: data.get('date'),
+        locationName: data.get('locationName'),
+        locationLat: data.get('locationLat'),
+        locationLng: data.get('locationLng'),
+        capacity: data.get('capacity'),
+        image: data.get('image'),
+        ticketTypes: data.get('ticketTypes'),
+    });
+
+    if (!validated.success) {
+        return { success: false, message: 'Invalid data.', errors: validated.error.flatten().fieldErrors };
+    }
+
+    const { ticketTypes, ...eventData } = validated.data;
+
+    try {
+        const newEvent: Omit<Event, 'id'> = {
+            ...eventData,
+            date: new Date(validated.data.date),
+            location: {
+                name: validated.data.locationName,
+                lat: validated.data.locationLat,
+                lng: validated.data.locationLng,
+            },
+            ticketTypes: JSON.parse(ticketTypes),
+        };
+        await createEventInDb(newEvent);
+        revalidatePath('/admin/events');
+        redirect('/admin/events');
+    } catch (e) {
+        return { success: false, message: 'Failed to create event.' };
+    }
+}
+
+export async function updateEvent(id: string, data: FormData) {
+    const validated = eventSchema.safeParse({
+        name: data.get('name'),
+        description: data.get('description'),
+        date: data.get('date'),
+        locationName: data.get('locationName'),
+        locationLat: data.get('locationLat'),
+        locationLng: data.get('locationLng'),
+        capacity: data.get('capacity'),
+        image: data.get('image'),
+        ticketTypes: data.get('ticketTypes'),
+    });
+
+    if (!validated.success) {
+        return { success: false, message: 'Invalid data.', errors: validated.error.flatten().fieldErrors };
+    }
+    const { ticketTypes, ...eventData } = validated.data;
+    try {
+         const updatedEvent: Omit<Event, 'id'> = {
+            ...eventData,
+            date: new Date(validated.data.date),
+            location: {
+                name: validated.data.locationName,
+                lat: validated.data.locationLat,
+                lng: validated.data.locationLng,
+            },
+            ticketTypes: JSON.parse(ticketTypes),
+        };
+        await updateEventInDb(id, updatedEvent);
+        revalidatePath('/admin/events');
+        revalidatePath(`/events/${id}`);
+        redirect('/admin/events');
+    } catch (e) {
+        return { success: false, message: 'Failed to update event.' };
+    }
+}
+
+export async function deleteEvent(id: string) {
+    try {
+        await deleteEventFromDb(id);
+        revalidatePath('/admin/events');
+    } catch (e) {
+        return { success: false, message: 'Failed to delete event.' };
     }
 }
