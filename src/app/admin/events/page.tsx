@@ -19,7 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Database } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +27,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { deleteEvent } from '@/lib/actions';
+import { deleteEvent, seedDatabase } from '@/lib/actions';
+import { useToast } from "@/hooks/use-toast";
+
 
 function DeleteEventButton({ eventId }: { eventId: string }) {
   const deleteEventWithId = deleteEvent.bind(null, eventId);
@@ -40,13 +42,30 @@ function DeleteEventButton({ eventId }: { eventId: string }) {
   );
 }
 
+function SeedDatabaseButton() {
+  return (
+    <form action={seedDatabase}>
+      <Button variant="outline" size="sm">
+        <Database className="mr-2 h-4 w-4" />
+        Seed Database
+      </Button>
+    </form>
+  );
+}
+
+
 export default async function AdminEventsPage() {
   const user = await getSessionUser();
   if (user?.role !== 'Admin') {
     redirect('/');
   }
 
-  const events = await getEvents(true); // include past events
+  let events = [];
+  try {
+    events = await getEvents(true); // include past events
+  } catch(e) {
+      // If db is not connected, it will throw. We can show an empty state.
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -59,12 +78,15 @@ export default async function AdminEventsPage() {
             Create, edit, and manage all events.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/events/edit">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Event
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <SeedDatabaseButton />
+          <Button asChild>
+            <Link href="/admin/events/edit">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Event
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -88,7 +110,7 @@ export default async function AdminEventsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map((event) => (
+              {events.length > 0 ? events.map((event) => (
                 <TableRow key={event.id}>
                   <TableCell className="font-medium">{event.name}</TableCell>
                   <TableCell>
@@ -123,7 +145,13 @@ export default async function AdminEventsPage() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                        No events found. You might need to connect to a database and seed it.
+                    </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

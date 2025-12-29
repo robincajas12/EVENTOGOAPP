@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { findUserByEmail, createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb, createEvent as createEventInDb, updateEvent as updateEventInDb, deleteEvent as deleteEventFromDb } from './data';
+import { findUserByEmail, createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb, createEvent as createEventInDb, updateEvent as updateEventInDb, deleteEvent as deleteEventFromDb, seedDatabase as seedDatabaseInDb } from './data';
 import { revalidatePath } from 'next/cache';
 import type { Event } from './types';
 
@@ -199,5 +199,16 @@ export async function deleteEvent(id: string) {
     } catch (e) {
         // This will be caught by a higher-level error boundary
         throw new Error('Failed to delete event.');
+    }
+}
+
+export async function seedDatabase() {
+    try {
+        await seedDatabaseInDb();
+        revalidatePath('/admin/events');
+        revalidatePath('/');
+        return { success: true, message: "Database seeded successfully!" };
+    } catch (e) {
+        return { success: false, message: "Failed to seed database." };
     }
 }
