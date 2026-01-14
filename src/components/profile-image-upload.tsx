@@ -28,15 +28,21 @@ export function ProfileImageUpload({ currentImage, onImageSelected }: ProfileIma
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 p-4 border rounded-lg bg-card">
-      <h3 className="text-lg font-semibold">Foto de Perfil</h3>
+    <div className="flex flex-col items-center gap-4 p-4 rounded-xl bg-[#1a1a1a] border border-white/10">
+      <h3 className="text-base font-bold text-white">Foto de Perfil</h3>
       <Avatar className="w-24 h-24">
         <AvatarImage src={preview} alt="Profile" />
         <AvatarFallback className="text-2xl">YO</AvatarFallback>
       </Avatar>
       <div className="grid w-full max-w-sm items-center gap-1.5">
-        <Label htmlFor="picture">Cambiar foto</Label>
-        <Input id="picture" type="file" accept="image/*" onChange={handleFileChange} />
+        <Label htmlFor="picture" className="text-gray-300 font-bold">Cambiar foto</Label>
+        <Input 
+          id="picture" 
+          type="file" 
+          accept="image/*" 
+          onChange={handleFileChange} 
+          className="text-white file:text-black file:bg-yellow-500 file:hover:bg-yellow-400 file:border-none file:rounded-full file:px-4 file:py-2 file:mr-4 hover:cursor-pointer bg-[#1a1a1a] border border-gray-700 rounded-md"
+        />
       </div>
     </div>
   );
