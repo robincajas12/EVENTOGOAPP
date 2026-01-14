@@ -1,10 +1,10 @@
 'use server'
 
 import dbConnect from "./db";
-import { UserModel, EventModel, TicketModel } from "./models"; // <--- AGREGADO TicketModel
+import { UserModel, EventModel, TicketModel } from "./models";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getEventById } from "./data"; // Quitamos getTicketsByUserId porque usaremos TicketModel directo
+import { getEventById } from "./data";
 import { decodeToken, createToken } from "./jwt"; 
 
 export async function updateUserImage(email: string, imageBase64: string) {
@@ -25,7 +25,7 @@ export async function updateUserImage(email: string, imageBase64: string) {
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,
-        image: updatedUser.image //la nueva foto
+        image: updatedUser.image
     };
 
     const newToken = createToken(userPayload); 
@@ -46,14 +46,14 @@ export async function createEventWithGallery(formData: FormData, galleryImages: 
 
     const rawData = Object.fromEntries(formData.entries());
 
-    // 1. CORRECCIÓN: Aseguramos que 'id' sea string siempre en tickets
+    // 1. BLINDAJE: Aseguramos que 'id' sea string siempre en tickets
     const rawTickets = JSON.parse(rawData.ticketTypes as string);
     const ticketTypes = rawTickets.map((t: any) => ({
         ...t,
         id: t.id || crypto.randomUUID() 
     }));
 
-    // 2. CORRECCIÓN: Parseamos la configuración de asientos (eventTypeConfig)
+    // 2. CORRECCIÓN: Parseamos la configuración de asientos para que no falle
     const eventTypeConfig = rawData.eventTypeConfig ? JSON.parse(rawData.eventTypeConfig as string) : undefined;
 
     const newEventData = {
@@ -69,7 +69,7 @@ export async function createEventWithGallery(formData: FormData, galleryImages: 
         image: rawData.image as string,
         images: galleryImages,
         ticketTypes: ticketTypes,
-        eventTypeConfig: eventTypeConfig, // <--- Ahora sí existe la variable
+        eventTypeConfig: eventTypeConfig, // <--- Aquí usamos la variable corregida
         createdBy: user.id
     };
 
@@ -104,14 +104,13 @@ export async function updateEventWithGallery(id: string, formData: FormData, gal
 
     const rawData = Object.fromEntries(formData.entries());
 
-    // 1. CORRECCIÓN: Tickets ID
     const rawTickets = JSON.parse(rawData.ticketTypes as string);
     const ticketTypes = rawTickets.map((t: any) => ({
         ...t,
         id: t.id || crypto.randomUUID()
     }));
 
-    // 2. CORRECCIÓN: Configuración de asientos
+    // Parseamos la config de asientos también al editar
     const eventTypeConfig = rawData.eventTypeConfig ? JSON.parse(rawData.eventTypeConfig as string) : undefined;
 
     const updateData = {
@@ -127,7 +126,7 @@ export async function updateEventWithGallery(id: string, formData: FormData, gal
         image: rawData.image as string,
         images: galleryImages, 
         ticketTypes: ticketTypes,
-        eventTypeConfig: eventTypeConfig, // <--- Ahora sí funciona
+        eventTypeConfig: eventTypeConfig,
     };
 
     try {
@@ -144,7 +143,7 @@ export async function updateEventWithGallery(id: string, formData: FormData, gal
     redirect('/admin/events');
 }
 
-// --- FUNCIÓN BLINDADA PARA VER TICKETS ---
+// --- ESTA ES LA FUNCIÓN QUE HACE QUE SE VEAN TUS TICKETS ---
 export async function getMyTicketsAction(token: string) {
   try {
     const user = decodeToken(token);
@@ -152,8 +151,8 @@ export async function getMyTicketsAction(token: string) {
 
     await dbConnect();
 
-    // 3. CORRECCIÓN CRÍTICA: Búsqueda flexible de ID (Texto u Objeto)
-    // Esto soluciona que no veas tus compras
+    // AQUÍ ESTÁ EL TRUCO:
+    // Buscamos el ID como texto O como objeto. Así nunca falla.
     const rawTickets = await TicketModel.find({
         $or: [
             { userId: user.id },                
@@ -164,14 +163,13 @@ export async function getMyTicketsAction(token: string) {
     const ticketsByEvent: Record<string, { eventId: string, count: number, tickets: any[] }> = {};
   
     for (const ticket of rawTickets) {
-        // Aseguramos que eventId sea string
         const eId = ticket.eventId.toString();
         
         if (!ticketsByEvent[eId]) {
             ticketsByEvent[eId] = { eventId: eId, count: 0, tickets: [] };
         }
         ticketsByEvent[eId].count++;
-        // Convertimos _id a string para evitar errores en React
+        // Convertimos _id a string para que React no se rompa
         ticketsByEvent[eId].tickets.push({ 
             ...ticket, 
             _id: ticket._id.toString(),
