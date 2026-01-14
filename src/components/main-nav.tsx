@@ -27,7 +27,7 @@ export function MainNav({ className, onLinkClick, ...props }: MainNavProps) {
 
   return (
     <nav
-      className={cn('hidden md:flex items-center space-x-4 lg:space-x-6 mx-6 text-sm font-bold text-gray-400', className)}
+      className={cn('text-sm font-bold text-gray-400', className)}
       {...props}
     >
       {routes.map((route) => (

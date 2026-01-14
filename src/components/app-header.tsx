@@ -27,7 +27,7 @@ export default function AppHeader() {
             </Button>
         </div>
         <div className="hidden md:flex items-center space-x-4 ml-auto">
-            <MainNav />
+            <MainNav className="flex items-center space-x-4 lg:space-x-6 mx-6" />
             <Link href="/profile" className="text-sm font-bold text-gray-400 hover:text-yellow-400">
                 MI PERFIL
             </Link>
@@ -46,7 +46,7 @@ export default function AppHeader() {
         </div>
         {isMenuOpen && (
             <div className="md:hidden absolute top-16 left-0 right-0 bg-black border-b border-gray-800 p-4">
-                <MainNav onLinkClick={handleLinkClick} />
+                <MainNav onLinkClick={handleLinkClick} className="flex flex-col space-y-2" />
                 <div className="flex flex-col space-y-2 mt-4">
                     <Link href="/profile" className="text-sm font-bold text-gray-400 hover:text-yellow-400" onClick={handleLinkClick}>
                         MI PERFIL
