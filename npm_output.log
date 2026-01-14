@@ -19,3 +19,11 @@ https://nextjs.org/telemetry
  ○ Compiling / ...
  ✓ Compiled / in 9.3s
  GET / 200 in 16400ms
+ ○ Compiling /scan ...
+ ✓ Compiled /scan in 7.3s
+ GET /scan 200 in 8689ms
+ GET / 200 in 4372ms
+ GET / 200 in 4641ms
+ GET /scan 200 in 1684ms
+ GET /scan 200 in 666ms
+ GET /scan 200 in 183ms
