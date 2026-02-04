@@ -7,6 +7,8 @@ import jsQR from 'jsqr';
 import { useToast } from '@/hooks/use-toast';
 import TicketValidationForm from '@/components/ticket-validation-form';
 import { Button } from '@/components/ui/button';
+import { useFormState } from 'react-dom';
+import { validateTicket } from '@/lib/actions';
 
 export default function FullScreenScanner() {
   const { user, loading } = useSession();
@@ -19,6 +21,20 @@ export default function FullScreenScanner() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [animationFrameId, setAnimationFrameId] = useState<number | null>(null);
+  const [state, dispatch] = useFormState(validateTicket, null);
+
+
+  useEffect(() => {
+    if (state?.message) {
+      stopCamera();
+      toast({
+        variant: state.success ? 'default' : 'destructive',
+        title: state.success ? 'Validation Successful' : 'Validation Failed',
+        description: state.message,
+      });
+    }
+  }, [state]);
+
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'Admin')) {
@@ -126,9 +142,11 @@ export default function FullScreenScanner() {
       {/* Formulario QR */}
       <TicketValidationForm
         formRef={formRef}
-        action={null}
-        state={null}
-        onFormSubmission={() => stopCamera()}
+        action={dispatch}
+        state={state}
+        onFormSubmission={() => {
+          // No es necesario parar la cámara aquí, el useEffect se encarga
+        }}
       />
 
       {/* Animación scan */}

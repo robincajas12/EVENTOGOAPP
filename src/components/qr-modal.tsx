@@ -8,18 +8,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useMemo } from 'react';
 
 interface TicketQRModalProps {
   isOpen: boolean;
   onClose: () => void;
-  ticketId: string;
+  qrData: string;
   eventName: string;
 }
 
-export function TicketQRModal({ isOpen, onClose, ticketId, eventName }: TicketQRModalProps) {
-  // El valor del QR será el ID único del ticket.
-  // En un entorno real, esto sería una URL firmada o un token encriptado.
-  const qrValue = ticketId; 
+export function TicketQRModal({ isOpen, onClose, qrData, eventName }: TicketQRModalProps) {
+  
+  const ticketId = useMemo(() => {
+    if (!qrData) return 'N/A';
+    try {
+      const data = JSON.parse(qrData);
+      return data.ticketId || 'N/A';
+    } catch (e) {
+      // If parsing fails, it might be a raw ID
+      return qrData;
+    }
+  }, [qrData]);
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -40,7 +50,7 @@ export function TicketQRModal({ isOpen, onClose, ticketId, eventName }: TicketQR
           {/* Contenedor del QR con borde decorativo */}
           <div className="bg-white p-4 rounded-2xl border-4 border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.2)]">
              <QRCodeSVG 
-                value={qrValue} 
+                value={qrData} 
                 size={200}
                 level="H" // Alto nivel de corrección de errores
                 includeMargin={true}

@@ -20,8 +20,8 @@ export default function MyTicketsPage() {
   const [myEvents, setMyEvents] = useState<any[]>([]);
   
   // Estado para controlar el modal del QR
-  const [qrModal, setQrModal] = useState<{ isOpen: boolean; ticketId: string; eventName: string }>({
-    isOpen: false, ticketId: '', eventName: ''
+  const [qrModal, setQrModal] = useState<{ isOpen: boolean; qrData: string; eventName: string }>({
+    isOpen: false, qrData: '', eventName: ''
   });
 
   useEffect(() => {
@@ -48,10 +48,10 @@ export default function MyTicketsPage() {
     }
   }, [token, user]);
 
-  // --- Función para abrir el modal QR ---
-  const openQrModal = (ticketId: string, eventName: string) => {
+  // --- Función para abrir el modal del QR ---
+  const openQrModal = (qrData: string, eventName: string) => {
       // Usamos el ID del primer ticket del grupo para generar el QR principal
-      setQrModal({ isOpen: true, ticketId, eventName });
+      setQrModal({ isOpen: true, qrData, eventName });
   };
 
   if (loading || user === undefined) {
@@ -88,7 +88,7 @@ export default function MyTicketsPage() {
         <TicketQRModal 
             isOpen={qrModal.isOpen}
             onClose={() => setQrModal({ ...qrModal, isOpen: false })}
-            ticketId={qrModal.ticketId}
+            qrData={qrModal.qrData}
             eventName={qrModal.eventName}
         />
         {/* ----------------------------- */}
@@ -117,7 +117,7 @@ export default function MyTicketsPage() {
 
                         const imageUrl = getEventImage(event);
                         // Obtenemos el ID del primer ticket para usarlo en el QR
-                        const mainTicketId = item.tickets[0]._id || item.tickets[0].id || 'UNKNOWN_ID';
+                        const mainTicketQrData = item.tickets[0].qrData || 'UNKNOWN_QR_DATA';
 
                         return (
                             <div key={item.eventId} className="bg-[#111] rounded-2xl overflow-hidden border border-white/10 flex flex-col md:flex-row hover:border-yellow-500/50 transition-all duration-300 hover:shadow-lg group animate-in slide-in-from-bottom-4">
@@ -152,11 +152,11 @@ export default function MyTicketsPage() {
 
                                     <div className="mt-6 pt-6 border-t border-dashed border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
                                         <p className="text-[10px] text-gray-500 font-mono tracking-widest uppercase hidden sm:block">
-                                            ID: {mainTicketId.slice(-8)}
+                                            ID: {item.tickets[0]._id.slice(-8)}
                                         </p>
                                         {/* --- BOTÓN ACTIVADO --- */}
                                         <Button 
-                                            onClick={() => openQrModal(mainTicketId, event.name)}
+                                            onClick={() => openQrModal(mainTicketQrData, event.name)}
                                             className="w-full sm:w-auto bg-white/5 hover:bg-white/10 text-white font-bold border border-white/10 hover:border-yellow-500/50 transition-all active:scale-95"
                                         >
                                             <QrCode className="w-4 h-4 mr-2 text-yellow-500" /> 

@@ -208,7 +208,7 @@ export const validateAndUseTicket = async (ticketId: string): Promise<{ success:
         return { success: false, message: "Invalid Ticket ID format." };
     }
     ticket = await TicketModel.findById(ticketId).lean();
-    
+    console.log("ticket " + ticket)
 
     if(!ticket) {
         return { success: false, message: "Invalid Ticket: Not found." };
