@@ -228,6 +228,77 @@ export const validateAndUseTicket = async (ticketId: string): Promise<{ success:
 }
 
 
+export const generateTicketsForPhysicalSales = async (
+    eventId: string,
+    ticketTypeId: string,
+    quantity: number,
+    adminUserId: string // Assuming an admin user performs this action
+): Promise<Ticket[]> => {
+    await dbConnect();
+    const event = await getEventById(eventId);
+    if (!event) throw new Error('Event not found');
+
+    const ticketType = event.ticketTypes.find(tt => tt.id === ticketTypeId);
+    if (!ticketType) throw new Error(`Ticket type ${ticketTypeId} not found for event ${eventId}`);
+
+    const totalTicketsToGenerate = quantity;
+
+    // Check capacity (similar to createOrder)
+    const existingTickets = await TicketModel.countDocuments({ eventId });
+    if(existingTickets + totalTicketsToGenerate > event.capacity) {
+        throw new Error(`Cannot generate tickets. Event capacity reached or exceeded.`);
+    }
+
+    const totalAmount = ticketType.price * quantity; // Price might be 0 for physical tickets, or a nominal value
+
+    // Create a new Order for these physical tickets
+    const newOrder = new OrderModel({
+        userId: adminUserId, // Associate with the admin generating them
+        eventId,
+        tickets: [],
+        totalAmount,
+        createdAt: new Date(),
+        // Optionally add a flag for physical/admin-generated tickets
+        isPhysical: true,
+    });
+    await newOrder.save();
+    const orderId = newOrder._id.toString();
+
+    const ticketsToCreate = [];
+    for (let i = 0; i < quantity; i++) {
+        const ticketId = new mongoose.Types.ObjectId();
+        ticketsToCreate.push({
+            _id: ticketId,
+            orderId: orderId,
+            eventId,
+            userId: adminUserId, // Associated with the admin
+            ticketTypeId,
+            status: 'valid' as const,
+            qrData: JSON.stringify({ ticketId: ticketId.toString(), eventId, userId: adminUserId, isPhysical: true }),
+        });
+    }
+
+    if (ticketsToCreate.length > 0) {
+        await TicketModel.insertMany(ticketsToCreate);
+    }
+
+    // Update the order with the IDs of the created tickets
+    newOrder.tickets = ticketsToCreate.map(t => t._id);
+    await newOrder.save();
+
+    // Return the created tickets
+    const createdTickets = await TicketModel.find({ _id: { $in: ticketsToCreate.map(t => t._id) } }).lean();
+    return JSON.parse(JSON.stringify(createdTickets.map(t => ({ ...t, id: t._id.toString() }))));
+};
+
+export const getTicketsByEventId = async (eventId: string): Promise<Ticket[]> => {
+    await dbConnect();
+    if (!mongoose.Types.ObjectId.isValid(eventId)) return []; // Return empty array for invalid eventId
+    const tickets = await TicketModel.find({ eventId }).lean();
+    return JSON.parse(JSON.stringify(tickets.map(t => ({ ...t, id: t._id.toString() }))));
+}
+
+
 // --- Database Seeding ---
 export const seedDatabase = async () => {
     await dbConnect();

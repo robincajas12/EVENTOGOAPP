@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-import { findUserByEmail, createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb, createEvent as createEventInDb, updateEvent as updateEventInDb, deleteEvent as deleteEventFromDb, seedDatabase as seedDatabaseInDb, getEvents, getEventById, getTicketsByUserId, updateUser as updateUserInDb, findUserById } from './data';
+import { findUserByEmail, createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb, createEvent as createEventInDb, updateEvent as updateEventInDb, deleteEvent as deleteEventFromDb, seedDatabase as seedDatabaseInDb, getEvents, getEventById, getTicketsByUserId, getTicketsByEventId, generateTicketsForPhysicalSales, updateUser as updateUserInDb, findUserById } from './data';
 import { revalidatePath } from 'next/cache';
 import type { Event, User } from './types';
 import { createToken, decodeToken } from './jwt';
@@ -287,3 +287,33 @@ export async function getEventByIdAction(id: string) {
 export async function getTicketsByUserIdAction(userId: string) {
     return getTicketsByUserId(userId);
 }
+
+export async function getTicketsByEventIdAction(eventId: string) {
+    return getTicketsByEventId(eventId);
+}
+
+export async function generatePhysicalTicketsAction(
+    eventId: string,
+    ticketTypeId: string,
+    quantity: number,
+    token: string | null
+) {
+    if (!token) {
+        return { success: false, message: 'Authentication required.' };
+    }
+    const userPayload = decodeToken(token);
+    if (!userPayload || userPayload.role !== 'Admin') {
+        return { success: false, message: 'Admin privileges required.' };
+    }
+
+    try {
+        const newTickets = await generateTicketsForPhysicalSales(eventId, ticketTypeId, quantity, userPayload.id);
+        revalidatePath('/admin/tickets/generate');
+        revalidatePath('/tickets');
+        return { success: true, message: `${quantity} tickets generated successfully!`, tickets: newTickets };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, message: errorMessage };
+    }
+}
+
